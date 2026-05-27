@@ -1,0 +1,1 @@
+namespace SmartPark.Asset.Domain;
