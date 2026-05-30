@@ -39,6 +39,9 @@ builder.Services.AddIoTPlatformInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// 统一异常处理中间件让监测、告警和控制接口都输出稳定错误结构。
+app.UseSmartParkExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

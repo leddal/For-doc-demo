@@ -24,6 +24,8 @@ public static class Extensions
 
         builder.AddDefaultHealthChecks();
 
+        // 统一注册全局异常处理，确保所有微服务都返回一致的错误结构。
+        builder.Services.AddSmartParkExceptionHandling();
         builder.Services.AddServiceDiscovery();
 
         builder.Services.ConfigureHttpClientDefaults(http =>

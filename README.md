@@ -177,6 +177,37 @@ IoTPlatform 告警/监测
 - `operator / SmartPark@123`
 - `reviewer / SmartPark@123`
 
+### 7.1 异常处理机制
+
+当前版本已经补齐统一异常捕获链路，后端服务遵循以下约定：
+
+- 所有微服务和网关统一启用全局异常处理中间件
+- 统一输出 `ProblemDetails` 风格错误响应
+- 错误响应中固定包含：
+  - `status`
+  - `title`
+  - `detail`
+  - `code`
+  - `message`
+  - `traceId`
+- `DomainException` 用于表达业务规则错误，如工单状态流转冲突
+- `IntegrationException` 用于表达跨服务调用失败、下游异常或响应不可解析
+- 协同服务调用工单服务失败时，不再把所有失败伪装成 `404`
+
+一个典型错误响应示例如下：
+
+```json
+{
+  "type": "https://httpstatuses.com/409",
+  "title": "业务状态冲突",
+  "status": 409,
+  "detail": "工单当前状态为 Dispatched，不能执行期望状态 Arrived 的流转。",
+  "code": "work_order_invalid_status_transition",
+  "message": "工单当前状态为 Dispatched，不能执行期望状态 Arrived 的流转。",
+  "traceId": "00-..."
+}
+```
+
 ## 8. 本地运行方式
 
 ### 8.1 启动基础设施

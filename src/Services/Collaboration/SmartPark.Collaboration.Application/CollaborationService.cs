@@ -65,11 +65,6 @@ public sealed class CollaborationService(
         }
 
         var created = await workOrderGateway.CreateFromEventAsync(entity, request, cancellationToken);
-        if (created is null)
-        {
-            return null;
-        }
-
         entity.BindWorkOrder(created.Id, created.Number);
         await repository.SaveChangesAsync(cancellationToken);
         return created;

@@ -39,6 +39,9 @@ builder.Services.AddAssetInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// 统一异常处理中间件保证资产服务与其他微服务保持同一套错误契约。
+app.UseSmartParkExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

@@ -236,7 +236,10 @@ public sealed class WorkOrder : AuditableEntity
     {
         if (Status != expected)
         {
-            throw new DomainException($"工单当前状态为 {Status}，不能执行期望状态 {expected} 的流转。");
+            throw new DomainException(
+                $"工单当前状态为 {Status}，不能执行期望状态 {expected} 的流转。",
+                code: "work_order_invalid_status_transition",
+                statusCode: 409);
         }
     }
 

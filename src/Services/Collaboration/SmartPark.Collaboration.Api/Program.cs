@@ -39,6 +39,9 @@ builder.Services.AddCollaborationInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// 事件协同链路会调用工单服务，统一异常响应有助于前端和调用方识别真实失败原因。
+app.UseSmartParkExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

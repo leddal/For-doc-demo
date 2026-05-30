@@ -57,6 +57,9 @@ public sealed class WorkOrderStatusMachineTests
             DateTimeOffset.UtcNow);
 
         Action action = () => workOrder.Arrive("operator", "处理员", "非法到场", DateTimeOffset.UtcNow);
-        _ = Assert.Throws<DomainException>(action);
+        var exception = Assert.Throws<DomainException>(action);
+
+        Assert.Equal("work_order_invalid_status_transition", exception.Code);
+        Assert.Equal(409, exception.StatusCode);
     }
 }

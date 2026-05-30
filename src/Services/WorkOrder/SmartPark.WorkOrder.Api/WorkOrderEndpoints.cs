@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using SmartPark.SharedKernel;
 using SmartPark.WorkOrder.Application;
 
 namespace SmartPark.WorkOrder.Api;
@@ -8,6 +7,7 @@ namespace SmartPark.WorkOrder.Api;
 /// <summary>
 /// 工单服务最小 API 端点定义。
 /// 重点暴露查询、详情、时间线以及完整状态流转接口。
+/// 具体异常统一交给全局异常处理中间件生成标准错误响应。
 /// </summary>
 public static class WorkOrderEndpoints
 {
@@ -53,16 +53,7 @@ public static class WorkOrderEndpoints
         => Results.Ok(await service.GetTimelineAsync(id, cancellationToken));
 
     private static async Task<IResult> CreateAsync(CreateWorkOrderRequest request, ClaimsPrincipal user, IWorkOrderService service, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return Results.Ok(await service.CreateAsync(request, ToContext(user), cancellationToken));
-        }
-        catch (DomainException exception)
-        {
-            return Results.BadRequest(new { message = exception.Message });
-        }
-    }
+        => Results.Ok(await service.CreateAsync(request, ToContext(user), cancellationToken));
 
     private static Task<IResult> DispatchAsync(Guid id, DispatchWorkOrderRequest request, ClaimsPrincipal user, IWorkOrderService service, CancellationToken cancellationToken)
         => ExecuteAsync(() => service.DispatchAsync(id, request, ToContext(user), cancellationToken));
@@ -93,14 +84,7 @@ public static class WorkOrderEndpoints
 
     private static async Task<IResult> ExecuteAsync(Func<Task<WorkOrderDto?>> action)
     {
-        try
-        {
-            var result = await action();
-            return result is null ? Results.NotFound() : Results.Ok(result);
-        }
-        catch (DomainException exception)
-        {
-            return Results.BadRequest(new { message = exception.Message });
-        }
+        var result = await action();
+        return result is null ? Results.NotFound() : Results.Ok(result);
     }
 }

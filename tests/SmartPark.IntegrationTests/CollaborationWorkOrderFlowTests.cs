@@ -61,7 +61,7 @@ public sealed class CollaborationWorkOrderFlowTests
 
     private sealed class FakeWorkOrderGateway : IWorkOrderGateway
     {
-        public Task<CreatedWorkOrderInfo?> CreateFromEventAsync(EventRecord entity, CreateWorkOrderFromEventRequest request, CancellationToken cancellationToken = default)
-            => Task.FromResult<CreatedWorkOrderInfo?>(new CreatedWorkOrderInfo(Guid.NewGuid(), "WO-FAKE-001"));
+        public Task<CreatedWorkOrderInfo> CreateFromEventAsync(EventRecord entity, CreateWorkOrderFromEventRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult(new CreatedWorkOrderInfo(Guid.NewGuid(), "WO-FAKE-001"));
     }
 }

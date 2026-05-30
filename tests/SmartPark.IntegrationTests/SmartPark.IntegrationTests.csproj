@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -20,7 +24,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Gateway\SmartPark.ApiGateway\SmartPark.ApiGateway.csproj" />
+    <ProjectReference Include="..\..\src\SmartPark.ServiceDefaults\SmartPark.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\SmartPark.SharedKernel\SmartPark.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\Services\Collaboration\SmartPark.Collaboration.Application\SmartPark.Collaboration.Application.csproj" />
+    <ProjectReference Include="..\..\src\Services\Collaboration\SmartPark.Collaboration.Domain\SmartPark.Collaboration.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Services\Collaboration\SmartPark.Collaboration.Infrastructure\SmartPark.Collaboration.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Services\Asset\SmartPark.Asset.Application\SmartPark.Asset.Application.csproj" />
   </ItemGroup>
 

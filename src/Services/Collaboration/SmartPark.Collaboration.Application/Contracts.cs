@@ -55,7 +55,8 @@ public interface ICollaborationRepository
 
 public interface IWorkOrderGateway
 {
-    Task<CreatedWorkOrderInfo?> CreateFromEventAsync(EventRecord entity, CreateWorkOrderFromEventRequest request, CancellationToken cancellationToken = default);
+    // 网关成功时必须返回已创建工单；任何失败都应抛出明确异常，不能再退化为 null。
+    Task<CreatedWorkOrderInfo> CreateFromEventAsync(EventRecord entity, CreateWorkOrderFromEventRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface ICollaborationService

@@ -39,6 +39,9 @@ builder.Services.AddWorkOrderInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// 统一异常处理中间件需要尽早进入管道，避免不同端点各自返回碎片化错误结构。
+app.UseSmartParkExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

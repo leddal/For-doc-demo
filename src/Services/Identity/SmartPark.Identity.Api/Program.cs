@@ -39,6 +39,9 @@ builder.Services.AddIdentityInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+// 身份服务同样使用统一异常处理中间件，保证登录失败和系统失败能被明确区分。
+app.UseSmartParkExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
