@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +17,7 @@ public sealed class GlobalExceptionHandler(
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var mapped = ExceptionMapping.Map(exception);
+
         var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
 
         logger.Log(
@@ -28,39 +28,7 @@ public sealed class GlobalExceptionHandler(
             httpContext.Request.Path,
             mapped.Code);
 
-        var problemDetails = new ProblemDetails
-        {
-            Status = mapped.StatusCode,
-            Title = mapped.Title,
-            Detail = mapped.Message,
-            Instance = httpContext.Request.Path,
-            Type = $"https://httpstatuses.com/{mapped.StatusCode}"
-        };
-
-        problemDetails.Extensions["traceId"] = traceId;
-        problemDetails.Extensions["code"] = mapped.Code;
-        problemDetails.Extensions["message"] = mapped.Message;
-        problemDetails.Extensions["timestamp"] = DateTimeOffset.UtcNow;
-
-        if (mapped.Details is not null)
-        {
-            problemDetails.Extensions["details"] = mapped.Details;
-        }
-
-        httpContext.Response.StatusCode = mapped.StatusCode;
-
-        var handled = await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
-        {
-            HttpContext = httpContext,
-            ProblemDetails = problemDetails,
-            Exception = exception
-        });
-
-        if (!handled)
-        {
-            await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-        }
-
+        await ProblemDetailsResponseWriter.WriteAsync(httpContext, mapped, problemDetailsService, exception, cancellationToken);
         return true;
     }
 }

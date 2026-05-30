@@ -44,10 +44,7 @@ public static class WorkOrderEndpoints
         => Results.Ok(await service.QueryAsync(new WorkOrderQuery(keyword, status, businessType, priority, assigneeUserId, pageNumber == 0 ? 1 : pageNumber, pageSize == 0 ? 20 : pageSize), cancellationToken));
 
     private static async Task<IResult> GetByIdAsync(Guid id, IWorkOrderService service, CancellationToken cancellationToken)
-    {
-        var workOrder = await service.GetByIdAsync(id, cancellationToken);
-        return workOrder is null ? Results.NotFound() : Results.Ok(workOrder);
-    }
+        => Results.Ok(await service.GetByIdAsync(id, cancellationToken));
 
     private static async Task<IResult> GetTimelineAsync(Guid id, IWorkOrderService service, CancellationToken cancellationToken)
         => Results.Ok(await service.GetTimelineAsync(id, cancellationToken));
@@ -82,9 +79,6 @@ public static class WorkOrderEndpoints
             user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system",
             user.FindFirstValue("display_name") ?? user.FindFirstValue(ClaimTypes.Name) ?? "system");
 
-    private static async Task<IResult> ExecuteAsync(Func<Task<WorkOrderDto?>> action)
-    {
-        var result = await action();
-        return result is null ? Results.NotFound() : Results.Ok(result);
-    }
+    private static async Task<IResult> ExecuteAsync(Func<Task<WorkOrderDto>> action)
+        => Results.Ok(await action());
 }

@@ -30,26 +30,17 @@ public static class CollaborationEndpoints
         => Results.Ok(await service.QueryEventsAsync(new EventQuery(keyword, status, pageNumber == 0 ? 1 : pageNumber, pageSize == 0 ? 20 : pageSize), cancellationToken));
 
     private static async Task<IResult> GetEventAsync(Guid id, ICollaborationService service, CancellationToken cancellationToken)
-    {
-        var eventItem = await service.GetEventAsync(id, cancellationToken);
-        return eventItem is null ? Results.NotFound() : Results.Ok(eventItem);
-    }
+        => Results.Ok(await service.GetEventAsync(id, cancellationToken));
 
     private static async Task<IResult> CreateEventAsync(CreateEventRequest request, ICollaborationService service, CancellationToken cancellationToken)
         => Results.Ok(await service.CreateEventAsync(request, cancellationToken));
 
     private static async Task<IResult> CloseEventAsync(Guid id, CloseEventRequest request, ICollaborationService service, CancellationToken cancellationToken)
-    {
-        var eventItem = await service.CloseEventAsync(id, request, cancellationToken);
-        return eventItem is null ? Results.NotFound() : Results.Ok(eventItem);
-    }
+        => Results.Ok(await service.CloseEventAsync(id, request, cancellationToken));
 
     // 该接口会调用工单服务创建工单，并把回写结果绑定到当前事件台账。
     private static async Task<IResult> CreateWorkOrderAsync(Guid id, CreateWorkOrderFromEventRequest request, ICollaborationService service, CancellationToken cancellationToken)
-    {
-        var created = await service.CreateWorkOrderAsync(id, request, cancellationToken);
-        return created is null ? Results.NotFound() : Results.Ok(created);
-    }
+        => Results.Ok(await service.CreateWorkOrderAsync(id, request, cancellationToken));
 
     private static async Task<IResult> GetAnnouncementsAsync(ICollaborationService service, CancellationToken cancellationToken)
         => Results.Ok(await service.GetAnnouncementsAsync(cancellationToken));

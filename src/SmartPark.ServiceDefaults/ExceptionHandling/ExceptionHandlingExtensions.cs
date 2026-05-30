@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using SmartPark.ServiceDefaults.ExceptionHandling;
 
@@ -28,6 +30,19 @@ namespace Microsoft.AspNetCore.Builder
         public static IApplicationBuilder UseSmartParkExceptionHandling(this IApplicationBuilder app)
         {
             app.UseExceptionHandler();
+            app.UseStatusCodePages(async context =>
+            {
+                var httpContext = context.HttpContext;
+                if (!AuthorizationProblemDetailsResultHandler.ShouldWrite(httpContext))
+                {
+                    return;
+                }
+
+                var problemDetailsService = httpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+                var descriptor = ExceptionMapping.MapStatusCode(httpContext.Response.StatusCode);
+                await ProblemDetailsResponseWriter.WriteAsync(httpContext, descriptor, problemDetailsService, null, httpContext.RequestAborted);
+            });
+
             return app;
         }
     }

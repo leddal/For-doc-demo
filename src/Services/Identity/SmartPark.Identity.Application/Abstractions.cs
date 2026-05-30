@@ -26,7 +26,7 @@ public interface ITokenIssuer
 
 public interface IIdentityService
 {
-    Task<TokenResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+    Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<UserDto>> GetUsersAsync(CancellationToken cancellationToken = default);
 

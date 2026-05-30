@@ -190,11 +190,17 @@ IoTPlatform 告警/监测
   - `code`
   - `message`
   - `traceId`
+  - `details`（仅请求校验失败等场景按需出现）
+- `401 unauthorized`：Token 缺失、无效或已过期
+- `401 authentication_failed`：登录用户名或密码错误
+- `403 forbidden`：已认证但无权限
+- `404 resource_not_found`：资源不存在
+- `422 validation_failed`：请求已完成反序列化，但字段或业务输入不满足规则
 - `DomainException` 用于表达业务规则错误，如工单状态流转冲突
 - `IntegrationException` 用于表达跨服务调用失败、下游异常或响应不可解析
 - 协同服务调用工单服务失败时，不再把所有失败伪装成 `404`
 
-一个典型错误响应示例如下：
+一个典型业务冲突响应示例如下：
 
 ```json
 {
@@ -205,6 +211,52 @@ IoTPlatform 告警/监测
   "code": "work_order_invalid_status_transition",
   "message": "工单当前状态为 Dispatched，不能执行期望状态 Arrived 的流转。",
   "traceId": "00-..."
+}
+```
+
+登录失败时会返回 `401 + authentication_failed`，示例如下：
+
+```json
+{
+  "type": "https://httpstatuses.com/401",
+  "title": "身份验证失败",
+  "status": 401,
+  "detail": "用户名或密码错误。",
+  "code": "authentication_failed",
+  "message": "用户名或密码错误。",
+  "traceId": "00-..."
+}
+```
+
+资源不存在时会返回 `404 + resource_not_found`，示例如下：
+
+```json
+{
+  "type": "https://httpstatuses.com/404",
+  "title": "资源不存在",
+  "status": 404,
+  "detail": "未找到工单 00000000-0000-0000-0000-000000000000。",
+  "code": "resource_not_found",
+  "message": "未找到工单 00000000-0000-0000-0000-000000000000。",
+  "traceId": "00-..."
+}
+```
+
+请求校验失败时会返回 `422 + validation_failed`，示例如下：
+
+```json
+{
+  "type": "https://httpstatuses.com/422",
+  "title": "业务规则校验失败",
+  "status": 422,
+  "detail": "请求校验失败。",
+  "code": "validation_failed",
+  "message": "请求校验失败。",
+  "traceId": "00-...",
+  "details": {
+    "userName": ["用户名不能为空。"],
+    "password": ["密码不能为空。"]
+  }
 }
 ```
 

@@ -1,12 +1,19 @@
 using SmartPark.SharedContracts.Common;
+using SmartPark.SharedKernel;
 using SmartPark.WorkOrder.Domain;
 
 namespace SmartPark.WorkOrder.Application;
 
-public sealed class WorkOrderService(IWorkOrderRepository repository) : IWorkOrderService
+public sealed class WorkOrderService(
+    IWorkOrderRepository repository,
+    IEnumerable<IRequestValidator<CreateWorkOrderRequest>> createValidators,
+    IEnumerable<IRequestValidator<DispatchWorkOrderRequest>> dispatchValidators,
+    IEnumerable<IRequestValidator<ActionRequest>> actionValidators) : IWorkOrderService
 {
     public async Task<WorkOrderDto> CreateAsync(CreateWorkOrderRequest request, ActionContext context, CancellationToken cancellationToken = default)
     {
+        createValidators.ValidateAndThrow(request);
+
         var now = DateTimeOffset.UtcNow;
         var workOrder = Domain.WorkOrder.Create(
             $"WO-{now:yyyyMMddHHmmss}-{Random.Shared.Next(100, 999)}",
@@ -40,52 +47,69 @@ public sealed class WorkOrderService(IWorkOrderRepository repository) : IWorkOrd
         return new PagedResult<WorkOrderDto>(result.Items.Select(Map).ToArray(), result.TotalCount, result.PageNumber, result.PageSize);
     }
 
-    public async Task<WorkOrderDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<WorkOrderDto> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => Map(await GetRequiredAsync(id, cancellationToken));
+
+    public Task<WorkOrderDto> DispatchAsync(Guid id, DispatchWorkOrderRequest request, ActionContext context, CancellationToken cancellationToken = default)
     {
-        var workOrder = await repository.GetByIdAsync(id, cancellationToken);
-        return workOrder is null ? null : Map(workOrder);
+        dispatchValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Dispatch(context.ActorId, context.ActorName, request.AssigneeUserId, request.AssigneeName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
     }
 
-    public Task<WorkOrderDto?> DispatchAsync(Guid id, DispatchWorkOrderRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Dispatch(context.ActorId, context.ActorName, request.AssigneeUserId, request.AssigneeName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    public Task<WorkOrderDto> AcceptAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
+    {
+        actionValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Accept(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    }
 
-    public Task<WorkOrderDto?> AcceptAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Accept(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    public Task<WorkOrderDto> ArriveAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
+    {
+        actionValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Arrive(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    }
 
-    public Task<WorkOrderDto?> ArriveAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Arrive(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    public Task<WorkOrderDto> StartAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
+    {
+        actionValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Start(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    }
 
-    public Task<WorkOrderDto?> StartAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Start(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    public Task<WorkOrderDto> CompleteAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
+    {
+        actionValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Complete(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    }
 
-    public Task<WorkOrderDto?> CompleteAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Complete(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    public Task<WorkOrderDto> VerifyAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
+    {
+        actionValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Verify(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    }
 
-    public Task<WorkOrderDto?> VerifyAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Verify(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
-
-    public Task<WorkOrderDto?> CloseAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
-        => ApplyAsync(id, workOrder => workOrder.Close(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    public Task<WorkOrderDto> CloseAsync(Guid id, ActionRequest request, ActionContext context, CancellationToken cancellationToken = default)
+    {
+        actionValidators.ValidateAndThrow(request);
+        return ApplyAsync(id, workOrder => workOrder.Close(context.ActorId, context.ActorName, request.Comment, DateTimeOffset.UtcNow), cancellationToken);
+    }
 
     public async Task<IReadOnlyCollection<WorkOrderTimelineItemDto>> GetTimelineAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var workOrder = await repository.GetByIdAsync(id, cancellationToken);
-        return workOrder is null
-            ? Array.Empty<WorkOrderTimelineItemDto>()
-            : workOrder.ActionLogs
-                .OrderBy(item => item.OccurredAt)
-                .Select(item => new WorkOrderTimelineItemDto(item.Id, item.Action, item.FromStatus, item.ToStatus, item.OperatorUserId, item.OperatorName, item.Comment, item.OccurredAt))
-                .ToArray();
+        var workOrder = await GetRequiredAsync(id, cancellationToken);
+        return workOrder.ActionLogs
+            .OrderBy(item => item.OccurredAt)
+            .Select(item => new WorkOrderTimelineItemDto(item.Id, item.Action, item.FromStatus, item.ToStatus, item.OperatorUserId, item.OperatorName, item.Comment, item.OccurredAt))
+            .ToArray();
     }
 
-    private async Task<WorkOrderDto?> ApplyAsync(Guid id, Action<Domain.WorkOrder> apply, CancellationToken cancellationToken)
+    private async Task<Domain.WorkOrder> GetRequiredAsync(Guid id, CancellationToken cancellationToken)
     {
         var workOrder = await repository.GetByIdAsync(id, cancellationToken);
-        if (workOrder is null)
-        {
-            return null;
-        }
+        return workOrder ?? throw new NotFoundException($"未找到工单 {id}。");
+    }
 
+    private async Task<WorkOrderDto> ApplyAsync(Guid id, Action<Domain.WorkOrder> apply, CancellationToken cancellationToken)
+    {
+        var workOrder = await GetRequiredAsync(id, cancellationToken);
         apply(workOrder);
         await repository.SaveChangesAsync(cancellationToken);
         return Map(workOrder);

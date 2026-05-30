@@ -1,6 +1,7 @@
 using SmartPark.Identity.Application;
 using SmartPark.Identity.Domain;
 using SmartPark.SharedContracts.Auth;
+using SmartPark.SharedKernel;
 
 namespace SmartPark.Identity.Tests;
 
@@ -9,25 +10,34 @@ public sealed class IdentityServiceTests
     [Fact]
     public async Task Login_Should_Return_Token_When_Password_Is_Valid()
     {
-        var user = CreateUser();
-        var service = new IdentityService(new FakeRepository(user), new FakePasswordService(true), new FakeTokenIssuer());
+        var service = CreateService(CreateUser(), passwordResult: true);
 
         var token = await service.LoginAsync(new LoginRequest("admin", "SmartPark@123"));
 
-        Assert.NotNull(token);
-        Assert.Equal("token", token!.AccessToken);
+        Assert.Equal("token", token.AccessToken);
     }
 
     [Fact]
-    public async Task Login_Should_Return_Null_When_Password_Is_Invalid()
+    public async Task Login_Should_Throw_ValidationException_When_Request_Is_Invalid()
     {
-        var user = CreateUser();
-        var service = new IdentityService(new FakeRepository(user), new FakePasswordService(false), new FakeTokenIssuer());
+        var service = CreateService(CreateUser(), passwordResult: true);
 
-        var token = await service.LoginAsync(new LoginRequest("admin", "wrong"));
+        var exception = await Assert.ThrowsAsync<ValidationException>(() => service.LoginAsync(new LoginRequest(" ", string.Empty)));
 
-        Assert.Null(token);
+        Assert.Equal("validation_failed", exception.Code);
+        Assert.NotNull(exception.Details);
     }
+
+    [Fact]
+    public async Task Login_Should_Throw_AuthenticationFailedException_When_Password_Is_Invalid()
+    {
+        var service = CreateService(CreateUser(), passwordResult: false);
+
+        await Assert.ThrowsAsync<AuthenticationFailedException>(() => service.LoginAsync(new LoginRequest("admin", "wrong")));
+    }
+
+    private static IdentityService CreateService(User user, bool passwordResult)
+        => new(new FakeRepository(user), new FakePasswordService(passwordResult), new FakeTokenIssuer(), [new LoginRequestValidator()]);
 
     private static User CreateUser()
     {

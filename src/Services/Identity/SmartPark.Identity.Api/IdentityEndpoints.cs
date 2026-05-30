@@ -24,10 +24,7 @@ public static class IdentityEndpoints
     }
 
     private static async Task<IResult> LoginAsync(LoginRequest request, IIdentityService service, CancellationToken cancellationToken)
-    {
-        var token = await service.LoginAsync(request, cancellationToken);
-        return token is null ? Results.Unauthorized() : Results.Ok(token);
-    }
+        => Results.Ok(await service.LoginAsync(request, cancellationToken));
 
     // 直接从 JWT Claims 回填当前登录人的基本信息，避免额外查库。
     private static IResult GetCurrentUser(ClaimsPrincipal user)

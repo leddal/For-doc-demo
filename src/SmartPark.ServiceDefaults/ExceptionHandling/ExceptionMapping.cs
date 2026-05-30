@@ -15,18 +15,16 @@ internal static class ExceptionMapping
     public static ExceptionDescriptor Map(Exception exception)
         => exception switch
         {
-            DomainException domainException => new(
+            DomainException domainException => Create(
                 domainException.StatusCode,
                 domainException.Code,
-                GetTitle(domainException.StatusCode),
                 domainException.Message,
                 domainException.Details,
                 domainException.StatusCode >= StatusCodes.Status500InternalServerError ? LogLevel.Error : LogLevel.Warning),
 
-            IntegrationException integrationException => new(
+            IntegrationException integrationException => Create(
                 integrationException.StatusCode,
                 integrationException.Code,
-                GetTitle(integrationException.StatusCode),
                 integrationException.Message,
                 integrationException.Details,
                 LogLevel.Error),
@@ -47,38 +45,71 @@ internal static class ExceptionMapping
                 null,
                 LogLevel.Warning),
 
-            UnauthorizedAccessException => new(
-                StatusCodes.Status403Forbidden,
-                "forbidden",
-                "禁止访问",
-                "当前用户没有权限执行该操作。",
-                null,
-                LogLevel.Warning),
+            UnauthorizedAccessException => MapStatusCode(StatusCodes.Status403Forbidden),
 
-            HttpRequestException => new(
+            HttpRequestException => Create(
                 StatusCodes.Status503ServiceUnavailable,
                 "upstream_service_unavailable",
-                "依赖服务不可用",
                 "依赖服务暂时不可用，请稍后重试。",
                 null,
                 LogLevel.Error),
 
-            DbUpdateException => new(
+            DbUpdateException => Create(
                 StatusCodes.Status500InternalServerError,
                 "database_update_failed",
-                "数据持久化失败",
                 "数据库操作失败，请稍后重试。",
                 null,
                 LogLevel.Error),
 
-            _ => new(
+            _ => Create(
                 StatusCodes.Status500InternalServerError,
                 "internal_server_error",
-                "服务器内部错误",
                 "服务器发生未处理异常，请稍后重试。",
                 null,
                 LogLevel.Error)
         };
+
+    public static ExceptionDescriptor MapStatusCode(int statusCode)
+        => statusCode switch
+        {
+            StatusCodes.Status401Unauthorized => Create(
+                StatusCodes.Status401Unauthorized,
+                "unauthorized",
+                "当前请求未通过身份验证，请先登录或提供有效令牌。",
+                null,
+                LogLevel.Warning),
+
+            StatusCodes.Status403Forbidden => Create(
+                StatusCodes.Status403Forbidden,
+                "forbidden",
+                "当前用户没有权限执行该操作。",
+                null,
+                LogLevel.Warning),
+
+            StatusCodes.Status404NotFound => Create(
+                StatusCodes.Status404NotFound,
+                "resource_not_found",
+                "请求的资源不存在。",
+                null,
+                LogLevel.Warning),
+
+            StatusCodes.Status422UnprocessableEntity => Create(
+                StatusCodes.Status422UnprocessableEntity,
+                "validation_failed",
+                "请求校验失败。",
+                null,
+                LogLevel.Warning),
+
+            _ => Create(
+                statusCode,
+                "request_failed",
+                "请求处理失败。",
+                null,
+                statusCode >= StatusCodes.Status500InternalServerError ? LogLevel.Error : LogLevel.Warning)
+        };
+
+    private static ExceptionDescriptor Create(int statusCode, string code, string message, object? details, LogLevel logLevel)
+        => new(statusCode, code, GetTitle(statusCode), message, details, logLevel);
 
     private static string GetTitle(int statusCode)
         => statusCode switch

@@ -1,6 +1,7 @@
 using SmartPark.Collaboration.Application;
 using SmartPark.Collaboration.Domain;
 using SmartPark.SharedContracts.Common;
+using SmartPark.SharedKernel;
 
 namespace SmartPark.IntegrationTests;
 
@@ -10,8 +11,7 @@ public sealed class CollaborationWorkOrderFlowTests
     public async Task Create_WorkOrder_From_Event_Should_Update_Event_Status()
     {
         var repository = new FakeRepository();
-        var gateway = new FakeWorkOrderGateway();
-        var service = new CollaborationService(repository, gateway);
+        var service = CreateService(repository, new FakeWorkOrderGateway());
 
         var created = await service.CreateEventAsync(new CreateEventRequest(
             "事件测试",
@@ -24,11 +24,26 @@ public sealed class CollaborationWorkOrderFlowTests
         var workOrder = await service.CreateWorkOrderAsync(created.Id, new CreateWorkOrderFromEventRequest(), CancellationToken.None);
         var eventItem = await service.GetEventAsync(created.Id, CancellationToken.None);
 
-        Assert.NotNull(workOrder);
-        Assert.NotNull(eventItem);
-        Assert.Equal(EventStatus.WorkOrderCreated, eventItem!.Status);
-        Assert.Equal(workOrder!.Id, eventItem.WorkOrderId);
+        Assert.Equal(EventStatus.WorkOrderCreated, eventItem.Status);
+        Assert.Equal(workOrder.Id, eventItem.WorkOrderId);
     }
+
+    [Fact]
+    public async Task Create_WorkOrder_From_Missing_Event_Should_Throw_NotFoundException()
+    {
+        var service = CreateService(new FakeRepository(), new FakeWorkOrderGateway());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.CreateWorkOrderAsync(Guid.NewGuid(), new CreateWorkOrderFromEventRequest()));
+    }
+
+    private static CollaborationService CreateService(ICollaborationRepository repository, IWorkOrderGateway gateway)
+        => new(
+            repository,
+            gateway,
+            [new CreateEventRequestValidator()],
+            [new CloseEventRequestValidator()],
+            [new CreateWorkOrderFromEventRequestValidator()],
+            [new CreateAnnouncementRequestValidator()]);
 
     private sealed class FakeRepository : ICollaborationRepository
     {

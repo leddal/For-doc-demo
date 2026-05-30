@@ -1,6 +1,8 @@
+using SmartPark.SharedContracts.Common;
 using SmartPark.SharedKernel;
-using WorkOrderAggregate = SmartPark.WorkOrder.Domain.WorkOrder;
+using SmartPark.WorkOrder.Application;
 using SmartPark.WorkOrder.Domain;
+using WorkOrderAggregate = SmartPark.WorkOrder.Domain.WorkOrder;
 
 namespace SmartPark.WorkOrder.Tests;
 
@@ -61,5 +63,45 @@ public sealed class WorkOrderStatusMachineTests
 
         Assert.Equal("work_order_invalid_status_transition", exception.Code);
         Assert.Equal(409, exception.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetById_Should_Throw_NotFoundException_When_WorkOrder_Does_Not_Exist()
+    {
+        var service = CreateService();
+
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task Create_Should_Throw_ValidationException_When_Request_Is_Invalid()
+    {
+        var service = CreateService();
+
+        await Assert.ThrowsAsync<ValidationException>(() => service.CreateAsync(
+            new CreateWorkOrderRequest(" ", string.Empty, (WorkOrderSourceType)99, (WorkOrderBusinessType)0, (WorkOrderPriority)0, " ", null, null, null, null, null),
+            new ActionContext("u1", "创建人")));
+    }
+
+    private static WorkOrderService CreateService(params WorkOrderAggregate[] workOrders)
+        => new(new FakeRepository(workOrders), [new CreateWorkOrderRequestValidator()], [new DispatchWorkOrderRequestValidator()], [new ActionRequestValidator()]);
+
+    private sealed class FakeRepository(params WorkOrderAggregate[] workOrders) : IWorkOrderRepository
+    {
+        private readonly List<WorkOrderAggregate> _workOrders = [.. workOrders];
+
+        public Task AddAsync(WorkOrderAggregate entity, CancellationToken cancellationToken = default)
+        {
+            _workOrders.Add(entity);
+            return Task.CompletedTask;
+        }
+
+        public Task<WorkOrderAggregate?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+            => Task.FromResult(_workOrders.FirstOrDefault(item => item.Id == id));
+
+        public Task<PagedResult<WorkOrderAggregate>> QueryAsync(WorkOrderQuery query, CancellationToken cancellationToken = default)
+            => Task.FromResult(new PagedResult<WorkOrderAggregate>(_workOrders, _workOrders.Count, query.PageNumber, query.PageSize));
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

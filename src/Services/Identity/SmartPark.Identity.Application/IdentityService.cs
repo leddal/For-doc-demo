@@ -1,24 +1,28 @@
 using SmartPark.Identity.Domain;
 using SmartPark.SharedContracts.Auth;
+using SmartPark.SharedKernel;
 
 namespace SmartPark.Identity.Application;
 
 public sealed class IdentityService(
     IIdentityRepository repository,
     IPasswordService passwordService,
-    ITokenIssuer tokenIssuer) : IIdentityService
+    ITokenIssuer tokenIssuer,
+    IEnumerable<IRequestValidator<LoginRequest>> loginRequestValidators) : IIdentityService
 {
-    public async Task<TokenResponse?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public async Task<TokenResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
+        loginRequestValidators.ValidateAndThrow(request);
+
         var user = await repository.GetByUserNameAsync(request.UserName, cancellationToken);
         if (user is null || !user.IsActive)
         {
-            return null;
+            throw new AuthenticationFailedException();
         }
 
         if (!passwordService.VerifyPassword(user, user.PasswordHash, request.Password))
         {
-            return null;
+            throw new AuthenticationFailedException();
         }
 
         var roles = user.UserRoles.Select(item => item.Role.Code).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();

@@ -1,11 +1,16 @@
 using SmartPark.Collaboration.Domain;
 using SmartPark.SharedContracts.Common;
+using SmartPark.SharedKernel;
 
 namespace SmartPark.Collaboration.Application;
 
 public sealed class CollaborationService(
     ICollaborationRepository repository,
-    IWorkOrderGateway workOrderGateway) : ICollaborationService
+    IWorkOrderGateway workOrderGateway,
+    IEnumerable<IRequestValidator<CreateEventRequest>> createEventValidators,
+    IEnumerable<IRequestValidator<CloseEventRequest>> closeEventValidators,
+    IEnumerable<IRequestValidator<CreateWorkOrderFromEventRequest>> createWorkOrderValidators,
+    IEnumerable<IRequestValidator<CreateAnnouncementRequest>> createAnnouncementValidators) : ICollaborationService
 {
     public async Task<PagedResult<EventDto>> QueryEventsAsync(EventQuery query, CancellationToken cancellationToken = default)
     {
@@ -13,14 +18,13 @@ public sealed class CollaborationService(
         return new PagedResult<EventDto>(result.Items.Select(MapEvent).ToArray(), result.TotalCount, result.PageNumber, result.PageSize);
     }
 
-    public async Task<EventDto?> GetEventAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var entity = await repository.GetEventAsync(id, cancellationToken);
-        return entity is null ? null : MapEvent(entity);
-    }
+    public async Task<EventDto> GetEventAsync(Guid id, CancellationToken cancellationToken = default)
+        => MapEvent(await GetRequiredEventAsync(id, cancellationToken));
 
     public async Task<EventDto> CreateEventAsync(CreateEventRequest request, CancellationToken cancellationToken = default)
     {
+        createEventValidators.ValidateAndThrow(request);
+
         var now = DateTimeOffset.UtcNow;
         var entity = new EventRecord
         {
@@ -38,27 +42,21 @@ public sealed class CollaborationService(
         return MapEvent(entity);
     }
 
-    public async Task<EventDto?> CloseEventAsync(Guid id, CloseEventRequest request, CancellationToken cancellationToken = default)
+    public async Task<EventDto> CloseEventAsync(Guid id, CloseEventRequest request, CancellationToken cancellationToken = default)
     {
-        var entity = await repository.GetEventAsync(id, cancellationToken);
-        if (entity is null)
-        {
-            return null;
-        }
+        closeEventValidators.ValidateAndThrow(request);
 
+        var entity = await GetRequiredEventAsync(id, cancellationToken);
         entity.Close(request.Note, DateTimeOffset.UtcNow);
         await repository.SaveChangesAsync(cancellationToken);
         return MapEvent(entity);
     }
 
-    public async Task<CreatedWorkOrderInfo?> CreateWorkOrderAsync(Guid eventId, CreateWorkOrderFromEventRequest request, CancellationToken cancellationToken = default)
+    public async Task<CreatedWorkOrderInfo> CreateWorkOrderAsync(Guid eventId, CreateWorkOrderFromEventRequest request, CancellationToken cancellationToken = default)
     {
-        var entity = await repository.GetEventAsync(eventId, cancellationToken);
-        if (entity is null)
-        {
-            return null;
-        }
+        createWorkOrderValidators.ValidateAndThrow(request);
 
+        var entity = await GetRequiredEventAsync(eventId, cancellationToken);
         if (entity.WorkOrderId.HasValue && !string.IsNullOrWhiteSpace(entity.WorkOrderNumber))
         {
             return new CreatedWorkOrderInfo(entity.WorkOrderId.Value, entity.WorkOrderNumber);
@@ -78,6 +76,8 @@ public sealed class CollaborationService(
 
     public async Task<AnnouncementDto> CreateAnnouncementAsync(CreateAnnouncementRequest request, CancellationToken cancellationToken = default)
     {
+        createAnnouncementValidators.ValidateAndThrow(request);
+
         var entity = new Announcement
         {
             Title = request.Title,
@@ -89,6 +89,12 @@ public sealed class CollaborationService(
         await repository.AddAnnouncementAsync(entity, cancellationToken);
         await repository.SaveChangesAsync(cancellationToken);
         return MapAnnouncement(entity);
+    }
+
+    private async Task<EventRecord> GetRequiredEventAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var entity = await repository.GetEventAsync(id, cancellationToken);
+        return entity ?? throw new NotFoundException($"未找到事件 {id}。");
     }
 
     private static EventDto MapEvent(EventRecord entity)
