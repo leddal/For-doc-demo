@@ -2,21 +2,21 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 // AppHost 负责在本地开发期统一编排网关与各个微服务。
 builder.AddProject<Projects.SmartPark_Identity_Api>("identity-api")
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:5101");
+    .WithHttpEndpoint(targetPort: 5101, port: 5101, env: "ASPNETCORE_HTTP_PORTS", isProxied: false);
 
 builder.AddProject<Projects.SmartPark_Asset_Api>("asset-api")
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:5102");
+    .WithHttpEndpoint(targetPort: 5102, port: 5102, env: "ASPNETCORE_HTTP_PORTS", isProxied: false);
 
 builder.AddProject<Projects.SmartPark_IoTPlatform_Api>("iot-api")
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:5103");
+    .WithHttpEndpoint(targetPort: 5103, port: 5103, env: "ASPNETCORE_HTTP_PORTS", isProxied: false);
 
 builder.AddProject<Projects.SmartPark_WorkOrder_Api>("workorder-api")
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:5104");
+    .WithHttpEndpoint(targetPort: 5104, port: 5104, env: "ASPNETCORE_HTTP_PORTS", isProxied: false);
 
 builder.AddProject<Projects.SmartPark_Collaboration_Api>("collaboration-api")
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:5105");
+    .WithHttpEndpoint(targetPort: 5105, port: 5105, env: "ASPNETCORE_HTTP_PORTS", isProxied: false);
 
 builder.AddProject<Projects.SmartPark_ApiGateway>("api-gateway")
-    .WithEnvironment("ASPNETCORE_URLS", "http://localhost:5100");
+    .WithHttpEndpoint(targetPort: 5100, port: 5100, env: "ASPNETCORE_HTTP_PORTS", isProxied: false);
 
 builder.Build().Run();
