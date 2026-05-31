@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Services\Identity\SmartPark.Identity.Infrastructure\SmartPark.Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Services\Asset\SmartPark.Asset.Infrastructure\SmartPark.Asset.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Services\IoTPlatform\SmartPark.IoTPlatform.Infrastructure\SmartPark.IoTPlatform.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Services\Collaboration\SmartPark.Collaboration.Infrastructure\SmartPark.Collaboration.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Services\WorkOrder\SmartPark.WorkOrder.Infrastructure\SmartPark.WorkOrder.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\SmartPark.SharedInfrastructure\SmartPark.SharedInfrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.7" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

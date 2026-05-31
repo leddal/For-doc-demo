@@ -170,7 +170,7 @@ IoTPlatform 告警/监测
 - 角色控制接口访问权限
 - Token 中包含角色和权限码，便于前端显示菜单和按钮
 
-默认种子账号：
+默认演示账号（运行 `dotnet run --project src/Tools/SmartPark.DbSeeder` 后生成）：
 
 - `admin / SmartPark@123`
 - `dispatcher / SmartPark@123`
@@ -270,19 +270,51 @@ IoTPlatform 告警/监测
 docker compose -f deploy/docker-compose.infrastructure.yml up -d
 ```
 
-### 8.2 启动整个后端
+如果你本地曾使用旧版 `EnsureCreated` 生成过库结构，建议先删除对应旧库或清理 PostgreSQL volume，再执行迁移。
+
+### 8.2 执行数据库迁移
+
+当前 5 个服务在启动时都会自动执行 `Database.MigrateAsync()`。
+如果你希望在启动服务前显式完成迁移，可以分别执行：
+
+```bash
+dotnet ef database update --project src/Services/Identity/SmartPark.Identity.Infrastructure/SmartPark.Identity.Infrastructure.csproj --context SmartPark.Identity.Infrastructure.IdentityDbContext
+dotnet ef database update --project src/Services/Asset/SmartPark.Asset.Infrastructure/SmartPark.Asset.Infrastructure.csproj --context SmartPark.Asset.Infrastructure.AssetDbContext
+dotnet ef database update --project src/Services/IoTPlatform/SmartPark.IoTPlatform.Infrastructure/SmartPark.IoTPlatform.Infrastructure.csproj --context SmartPark.IoTPlatform.Infrastructure.IoTPlatformDbContext
+dotnet ef database update --project src/Services/Collaboration/SmartPark.Collaboration.Infrastructure/SmartPark.Collaboration.Infrastructure.csproj --context SmartPark.Collaboration.Infrastructure.CollaborationDbContext
+dotnet ef database update --project src/Services/WorkOrder/SmartPark.WorkOrder.Infrastructure/SmartPark.WorkOrder.Infrastructure.csproj --context SmartPark.WorkOrder.Infrastructure.WorkOrderDbContext
+```
+
+### 8.3 生成演示数据
+
+统一 Seeder 项目负责生成默认账号、资产、监测点、告警、事件、公告和示例工单：
+
+```bash
+dotnet run --project src/Tools/SmartPark.DbSeeder
+```
+
+如需只生成部分模块，可传入模块参数，例如：
+
+```bash
+dotnet run --project src/Tools/SmartPark.DbSeeder -- --modules=identity,asset
+```
+
+可用模块：`identity`、`asset`、`iotplatform`（或 `iot`）、`collaboration`、`workorder`。
+选择 `workorder` 或 `collaboration` 时，会自动补齐依赖模块的种子数据。
+
+### 8.4 启动整个后端
 
 ```bash
 dotnet run --project src/SmartPark.AppHost
 ```
 
-### 8.3 单独构建
+### 8.5 单独构建
 
 ```bash
 dotnet build SmartPark.sln
 ```
 
-### 8.4 运行测试
+### 8.6 运行测试
 
 ```bash
 dotnet test SmartPark.sln
@@ -297,11 +329,14 @@ dotnet test SmartPark.sln
 - JWT 鉴权
 - 工单状态机
 - 事件协同
+- 每服务独立 PostgreSQL 数据库
+- EF Core Migration 管理
+- 统一 .NET Seeder 演示数据入口
 - 基础前端可视化
 
 暂未深做的部分：
 
-- 正式 EF Core Migration 管理
+- Redis 业务缓存落地（当前仅接入共享缓存基础设施）
 - 消息总线
 - 分布式事务
 - 真正的第三方平台对接
@@ -312,7 +347,7 @@ dotnet test SmartPark.sln
 
 建议你后续继续补这几块：
 
-1. 把 `EnsureCreated` 切换为正式 Migration
+1. 为数据库迁移补充 CI/CD / 发布流程约束
 2. 增加 Redis 缓存与分布式锁的实际使用场景
 3. 引入消息总线处理告警转事件、事件转工单
 4. 为工单增加图片上传和回单能力
