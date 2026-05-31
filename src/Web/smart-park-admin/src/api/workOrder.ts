@@ -1,14 +1,16 @@
 import http from './request'
-import type { ApiResponse, PageParams, PageResult, WorkOrder } from '@/types'
+import type { PageParams, PageResult, WorkOrder } from '@/types'
 
 export function getWorkOrdersApi(params: PageParams) {
-  return http.get<any, ApiResponse<PageResult<WorkOrder>>>('/work-order/list', { params })
+  const { page, pageSize } = params
+  return http.get<any, PageResult<WorkOrder>>('/work-orders', {
+    params: {
+      pageNumber: page,
+      pageSize,
+    },
+  })
 }
 
 export function createWorkOrderApi(data: Partial<WorkOrder>) {
-  return http.post<any, ApiResponse<WorkOrder>>('/work-order/create', data)
-}
-
-export function updateWorkOrderApi(id: number, data: Partial<WorkOrder>) {
-  return http.put<any, ApiResponse<WorkOrder>>(`/work-order/${id}`, data)
+  return http.post<any, WorkOrder>('/work-orders', data)
 }

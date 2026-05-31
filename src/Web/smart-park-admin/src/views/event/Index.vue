@@ -4,39 +4,32 @@
       <template #header>
         <div class="card-header">
           <span>事件列表</span>
-          <el-select v-model="typeFilter" placeholder="事件类型" clearable style="width: 140px" @change="filterChange">
-            <el-option label="火灾" value="fire" />
-            <el-option label="入侵" value="intrusion" />
-            <el-option label="设备" value="device" />
-            <el-option label="环境" value="environment" />
-            <el-option label="其他" value="other" />
+          <el-select v-model="statusFilter" placeholder="事件状态" clearable style="width: 160px" @change="filterChange">
+            <el-option label="待处理" :value="1" />
+            <el-option label="已转工单" :value="2" />
+            <el-option label="已关闭" :value="3" />
           </el-select>
         </div>
       </template>
 
       <el-table :data="list" v-loading="loading" stripe style="width: 100%">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="title" label="事件标题" min-width="180" />
-        <el-table-column label="类型" width="90">
+        <el-table-column prop="code" label="事件编码" width="180" />
+        <el-table-column prop="title" label="事件标题" min-width="220" />
+        <el-table-column label="严重级别" width="110">
           <template #default="{ row }">
-            <el-tag :type="typeTag(row.type)" size="small">{{ typeLabel(row.type) }}</el-tag>
+            <el-tag :type="severityTag(row.severity)" size="small">{{ severityLabel(row.severity) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="级别" width="80">
-          <template #default="{ row }">
-            <el-tag :type="levelTag(row.level)" size="small">{{ row.level }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="source" label="来源" width="120" />
+        <el-table-column prop="area" label="区域" min-width="180" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="evtStatusType(row.status)" size="small">{{ evtStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="happenedAt" label="发生时间" width="180" />
+        <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column label="操作" width="110" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status !== 'resolved'" type="primary" size="small" @click="handleResolve(row.id)">
+            <el-button v-if="!isResolved(row.status)" type="primary" size="small" @click="handleResolve(row.id)">
               处理
             </el-button>
             <span v-else class="resolved-text">已处理</span>
@@ -72,18 +65,19 @@ const loading = ref(false)
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
-const typeFilter = ref('')
+const statusFilter = ref<number | undefined>()
 
 onMounted(() => fetchData())
 
 async function fetchData() {
   loading.value = true
   try {
-    const res = await getEventsApi({ page: page.value, pageSize: pageSize.value, type: typeFilter.value || undefined })
-    list.value = res.data.items
-    total.value = res.data.total
+    const res = await getEventsApi({ page: page.value, pageSize: pageSize.value, status: statusFilter.value })
+    list.value = res.items ?? []
+    total.value = res.total ?? res.totalCount ?? list.value.length
   } catch {
     list.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -94,7 +88,7 @@ function filterChange() {
   fetchData()
 }
 
-async function handleResolve(id: number) {
+async function handleResolve(id: string) {
   try {
     await resolveEventApi(id)
     ElMessage.success('事件已标记处理')
@@ -104,25 +98,64 @@ async function handleResolve(id: number) {
   }
 }
 
-function typeTag(t: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
-  const map = { fire: 'danger', intrusion: 'warning', device: undefined, environment: 'success', other: 'info' } as const
-  return map[t as keyof typeof map] ?? 'info'
+function normalize(value: unknown) {
+  return String(value ?? '').toLowerCase()
 }
-function typeLabel(t: string) {
-  const map: Record<string, string> = { fire: '火灾', intrusion: '入侵', device: '设备', environment: '环境', other: '其他' }
-  return map[t] || t
+
+function isResolved(status: unknown) {
+  return normalize(status) !== '1' && normalize(status) !== 'open'
 }
-function levelTag(l: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
-  const map = { info: 'info', warning: 'warning', critical: 'danger' } as const
-  return map[l as keyof typeof map] ?? 'info'
+
+function severityTag(level: unknown): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
+  const map = {
+    '1': 'info',
+    '2': 'warning',
+    '3': 'warning',
+    '4': 'danger',
+    low: 'info',
+    medium: 'warning',
+    high: 'warning',
+    critical: 'danger',
+  } as const
+  return map[normalize(level) as keyof typeof map] ?? 'info'
 }
-function evtStatusType(s: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
-  const map = { unprocessed: 'danger', processing: 'warning', resolved: 'success' } as const
-  return map[s as keyof typeof map] ?? 'info'
+
+function severityLabel(level: unknown) {
+  const map: Record<string, string> = {
+    '1': '低',
+    '2': '中',
+    '3': '高',
+    '4': '严重',
+    low: '低',
+    medium: '中',
+    high: '高',
+    critical: '严重',
+  }
+  return map[normalize(level)] || String(level ?? '-')
 }
-function evtStatusLabel(s: string) {
-  const map: Record<string, string> = { unprocessed: '未处理', processing: '处理中', resolved: '已处理' }
-  return map[s] || s
+
+function evtStatusType(status: unknown): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
+  const map = {
+    '1': 'danger',
+    '2': 'warning',
+    '3': 'success',
+    open: 'danger',
+    workordercreated: 'warning',
+    closed: 'success',
+  } as const
+  return map[normalize(status) as keyof typeof map] ?? 'info'
+}
+
+function evtStatusLabel(status: unknown) {
+  const map: Record<string, string> = {
+    '1': '待处理',
+    '2': '已转工单',
+    '3': '已关闭',
+    open: '待处理',
+    workordercreated: '已转工单',
+    closed: '已关闭',
+  }
+  return map[normalize(status)] || String(status ?? '-')
 }
 </script>
 

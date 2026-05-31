@@ -15,7 +15,9 @@ export interface PageParams {
 export interface PageResult<T> {
   items: T[]
   total: number
+  totalCount?: number
   page: number
+  pageNumber?: number
   pageSize: number
 }
 
@@ -26,60 +28,94 @@ export interface LoginRequest {
 }
 
 /** 登录响应 */
-export interface LoginResponse {
-  token: string
-  user: UserInfo
+export interface LoginTokenResponse {
+  accessToken: string
+  expiresAt: string
+  userId: string
+  userName: string
+  displayName: string
+  roles: string[]
+  permissions: string[]
+}
+
+/** 当前用户响应 */
+export interface CurrentUserResponse {
+  userId: string
+  userName: string
+  displayName: string
+  roles: string[]
+  permissions: string[]
 }
 
 /** 用户信息 */
 export interface UserInfo {
-  id: number
+  id: string
   username: string
   displayName: string
-  role: string
+  roles: string[]
+  permissions: string[]
 }
 
 /** 工单 */
 export interface WorkOrder {
-  id: number
+  id: string
+  number?: string
   title: string
-  description: string
-  status: 'pending' | 'processing' | 'completed' | 'cancelled'
-  priority: 'low' | 'medium' | 'high' | 'urgent'
-  assignee?: string
+  description?: string
+  status: string | number
+  priority: string | number
+  sourceType: string | number
+  businessType?: string | number
+  parkArea?: string
+  relatedAssetId?: string | null
+  relatedEventId?: string | null
+  assetId?: string | null
+  eventId?: string | null
   createdAt: string
-  updatedAt: string
 }
 
 /** 资产 */
 export interface Asset {
-  id: number
+  id: string
+  assetCode?: string
+  code?: string
   name: string
-  type: string
+  type?: string | number
+  category?: string
+  area?: string
   location: string
-  status: 'normal' | 'warning' | 'fault' | 'offline'
-  department: string
-  lastMaintenance: string
+  status: string | number
+  model?: string | null
+  createdAt?: string
+  warrantyUntil?: string | null
 }
 
 /** 事件 */
 export interface ParkEvent {
-  id: number
+  id: string
+  code?: string
   title: string
-  type: 'fire' | 'intrusion' | 'device' | 'environment' | 'other'
-  level: 'info' | 'warning' | 'critical'
-  source: string
   description: string
-  happenedAt: string
-  status: 'unprocessed' | 'processing' | 'resolved'
+  area?: string
+  location?: string
+  severity: string | number
+  status: string | number
+  relatedAssetId?: string | null
+  relatedAlertId?: string | null
+  workOrderId?: string | null
+  workOrderNumber?: string | null
+  createdAt: string
+  closedAt?: string | null
 }
 
 /** 公告 */
 export interface Announcement {
-  id: number
+  id: string
   title: string
   content: string
-  publisher: string
-  publishedAt: string
-  priority: 'low' | 'normal' | 'high'
+  status?: string | number | boolean
+  isPublished?: boolean
+  createdBy?: string
+  publishedAt?: string | null
+  createdAt?: string
 }

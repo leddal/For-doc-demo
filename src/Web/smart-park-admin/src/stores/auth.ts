@@ -1,8 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { loginApi, logoutApi, getUserInfoApi } from '@/api/auth'
-import type { UserInfo, LoginRequest } from '@/types'
+import type { CurrentUserResponse, LoginRequest, LoginTokenResponse, UserInfo } from '@/types'
 import { ElMessage } from 'element-plus'
+
+function mapUser(payload: CurrentUserResponse | LoginTokenResponse): UserInfo {
+  return {
+    id: payload.userId,
+    username: payload.userName,
+    displayName: payload.displayName,
+    roles: payload.roles,
+    permissions: payload.permissions,
+  }
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
@@ -10,16 +20,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(data: LoginRequest) {
     const res = await loginApi(data)
-    token.value = res.data.token
-    user.value = res.data.user
-    localStorage.setItem('token', res.data.token)
-    return res.data
+    token.value = res.accessToken
+    user.value = mapUser(res)
+    localStorage.setItem('token', res.accessToken)
+    return user.value
   }
 
   async function fetchUserInfo() {
     try {
       const res = await getUserInfoApi()
-      user.value = res.data
+      user.value = mapUser(res)
     } catch {
       user.value = null
     }

@@ -4,6 +4,9 @@ import { resolve } from 'path'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const apiBase = env.VITE_API_BASE || '/api'
+  const proxyTarget = env.VITE_API_PROXY_TARGET || 'http://localhost:5100'
+
   return {
     plugins: [vue()],
     resolve: {
@@ -13,12 +16,14 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      proxy: {
-        '/gateway': {
-          target: env.VITE_API_BASE || 'http://localhost:8080',
-          changeOrigin: true,
-        },
-      },
+      proxy: apiBase.startsWith('/')
+        ? {
+            [apiBase]: {
+              target: proxyTarget,
+              changeOrigin: true,
+            },
+          }
+        : undefined,
     },
   }
 })

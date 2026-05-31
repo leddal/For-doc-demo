@@ -1,14 +1,14 @@
 import http from './request'
-import type { ApiResponse, LoginRequest, LoginResponse, UserInfo } from '@/types'
+import type { CurrentUserResponse, LoginRequest, LoginTokenResponse } from '@/types'
 
 export function loginApi(data: LoginRequest) {
-  return http.post<any, ApiResponse<LoginResponse>>('/auth/login', data)
+  return http.post<any, LoginTokenResponse>('/auth/login', data)
 }
 
 export function logoutApi() {
-  return http.post<any, ApiResponse<null>>('/auth/logout')
+  return http.post<any, null>('/auth/logout')
 }
 
 export function getUserInfoApi() {
-  return http.get<any, ApiResponse<UserInfo>>('/auth/userinfo')
+  return http.get<any, CurrentUserResponse>('/auth/me')
 }

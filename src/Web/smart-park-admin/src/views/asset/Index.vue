@@ -16,18 +16,30 @@
 
       <el-table :data="list" v-loading="loading" stripe style="width: 100%">
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="name" label="资产名称" min-width="160" />
-        <el-table-column prop="type" label="类型" width="100" />
-        <el-table-column prop="location" label="位置" width="160" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="资产编码" width="160">
+          <template #default="{ row }">
+            {{ row.assetCode || row.code || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="name" label="资产名称" min-width="180" />
+        <el-table-column label="分类" width="120">
+          <template #default="{ row }">
+            {{ assetTypeLabel(row.type ?? row.category) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="location" label="位置" min-width="180" />
+        <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="statusType(row.status)" size="small">
               {{ statusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="department" label="所属部门" width="120" />
-        <el-table-column prop="lastMaintenance" label="最近维保" width="180" />
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">
+            {{ row.createdAt || '-' }}
+          </template>
+        </el-table-column>
       </el-table>
 
       <div v-if="!loading && list.length === 0" class="empty-state">
@@ -64,11 +76,12 @@ onMounted(() => fetchData())
 async function fetchData() {
   loading.value = true
   try {
-    const res = await getAssetsApi({ page: page.value, pageSize: pageSize.value, keyword: keyword.value })
-    list.value = res.data.items
-    total.value = res.data.total
+    const res = await getAssetsApi({ page: page.value, pageSize: pageSize.value, keyword: keyword.value || undefined })
+    list.value = res.items ?? []
+    total.value = res.total ?? res.totalCount ?? list.value.length
   } catch {
     list.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -79,14 +92,50 @@ function search() {
   fetchData()
 }
 
-function statusType(s: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
-  const map = { normal: 'success', warning: 'warning', fault: 'danger', offline: 'info' } as const
-  return map[s as keyof typeof map] ?? 'info'
+function normalize(value: unknown) {
+  return String(value ?? '').toLowerCase()
 }
 
-function statusLabel(s: string) {
-  const map: Record<string, string> = { normal: '正常', warning: '预警', fault: '故障', offline: '离线' }
-  return map[s] || s
+function assetTypeLabel(type: unknown) {
+  const map: Record<string, string> = {
+    '1': '设备',
+    '2': '基础设施',
+    '3': '植物',
+    device: '设备',
+    infrastructure: '基础设施',
+    plant: '植物',
+  }
+  return map[normalize(type)] || String(type ?? '-')
+}
+
+function statusType(s: unknown): 'primary' | 'success' | 'warning' | 'info' | 'danger' | undefined {
+  const map = {
+    '1': 'success',
+    '2': 'warning',
+    '3': 'info',
+    active: 'success',
+    maintenance: 'warning',
+    undermaintenance: 'warning',
+    offline: 'info',
+    inactive: 'info',
+    retired: 'danger',
+  } as const
+  return map[normalize(s) as keyof typeof map] ?? 'info'
+}
+
+function statusLabel(s: unknown) {
+  const map: Record<string, string> = {
+    '1': '在用',
+    '2': '维护中',
+    '3': '离线',
+    active: '在用',
+    maintenance: '维护中',
+    undermaintenance: '维护中',
+    offline: '离线',
+    inactive: '停用',
+    retired: '已报废',
+  }
+  return map[normalize(s)] || String(s ?? '-')
 }
 </script>
 
